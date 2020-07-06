@@ -31,7 +31,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/dgraph-io/badger/v2"
+	badger "github.com/dgraph-io/badger/v2"
 	"github.com/dgraph-io/badger/v2/y"
 
 	"github.com/dgraph-io/dgraph/chunker"
@@ -172,15 +172,7 @@ func readSchema(opt *options) *schema.ParsedSchema {
 
 func (ld *loader) mapStage() {
 	ld.prog.setPhase(mapPhase)
-	var db *badger.DB
-	if len(ld.opt.ClientDir) > 0 {
-		x.Check(os.MkdirAll(ld.opt.ClientDir, 0700))
-
-		var err error
-		db, err = badger.Open(badger.DefaultOptions(ld.opt.ClientDir))
-		x.Checkf(err, "Error while creating badger KV posting store")
-	}
-	ld.xids = xidmap.New(ld.zero, db)
+	ld.xids = xidmap.New(ld.zero, nil)
 
 	files := x.FindDataFiles(ld.opt.DataFiles, []string{".rdf", ".rdf.gz", ".json", ".json.gz"})
 	if len(files) == 0 {
@@ -250,9 +242,6 @@ func (ld *loader) mapStage() {
 		ld.mappers[i] = nil
 	}
 	x.Check(ld.xids.Flush())
-	if db != nil {
-		x.Check(db.Close())
-	}
 	ld.xids = nil
 }
 

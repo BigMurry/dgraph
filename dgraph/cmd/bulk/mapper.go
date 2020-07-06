@@ -121,7 +121,7 @@ func (m *mapper) writeMapEntriesToFile(entries []*pb.MapEntry, encodedSize uint6
 	}()
 
 	sizeBuf := make([]byte, binary.MaxVarintLen64)
-	for _, me := range entries {
+	for i, me := range entries {
 		n := binary.PutUvarint(sizeBuf, uint64(me.Size()))
 		_, err := w.Write(sizeBuf[:n])
 		x.Check(err)
@@ -130,7 +130,8 @@ func (m *mapper) writeMapEntriesToFile(entries []*pb.MapEntry, encodedSize uint6
 		x.Check(err)
 		_, err = w.Write(meBuf)
 		x.Check(err)
-		m.mePool.Put(me)
+		entries[i] = nil
+		// m.mePool.Put(me)
 	}
 }
 
@@ -158,7 +159,7 @@ func (m *mapper) run(inputFormat chunker.InputFormat) {
 				}
 			}
 
-			m.processNQuad(gql.NQuad{NQuad: nq})
+			m.processNQuad(gql.NQuad{NQuad: nq}) // mePool.get()
 			atomic.AddInt64(&m.prog.nquadCount, 1)
 		}
 
@@ -166,10 +167,11 @@ func (m *mapper) run(inputFormat chunker.InputFormat) {
 			sh := &m.shards[i]
 			if sh.encodedSize >= m.opt.MapBufSize {
 				sh.mu.Lock() // One write at a time.
-				go m.writeMapEntriesToFile(sh.entries, sh.encodedSize, i)
+				m.writeMapEntriesToFile(sh.entries, sh.encodedSize, i)
 				// Clear the entries and encodedSize for the next batch.
 				// Proactively allocate 32 slots to bootstrap the entries slice.
-				sh.entries = make([]*pb.MapEntry, 0, 32)
+				// sh.entries = make([]*pb.MapEntry, 0, 32)
+				sh.entries = sh.entries[:0]
 				sh.encodedSize = 0
 			}
 		}
@@ -188,8 +190,8 @@ func (m *mapper) run(inputFormat chunker.InputFormat) {
 func (m *mapper) addMapEntry(key []byte, p *pb.Posting, shard int) {
 	atomic.AddInt64(&m.prog.mapEdgeCount, 1)
 
-	me := m.mePool.Get().(*pb.MapEntry)
-	*me = pb.MapEntry{Key: key}
+	// me := m.mePool.Get().(*pb.MapEntry)
+	me := &pb.MapEntry{Key: key}
 
 	if p.PostingType != pb.Posting_REF || len(p.Facets) > 0 {
 		me.Posting = p
@@ -254,9 +256,10 @@ func (m *mapper) lookupUid(xid string) uint64 {
 	// xid is alive, the whole line is going to be alive and won't be GC'd.
 	// Also, checked that sb goes on the stack whereas sb.String() goes on
 	// heap. Note that the calls to the strings.Builder.* are inlined.
-	sb := strings.Builder{}
-	x.Check2(sb.WriteString(xid))
-	uid, isNew := m.xids.AssignUid(sb.String())
+	// sb := strings.Builder{}
+	// x.Check2(sb.WriteString(xid))
+	s := xid + ""
+	uid, isNew := m.xids.AssignUid(s)
 	if !m.opt.StoreXids || !isNew {
 		return uid
 	}
