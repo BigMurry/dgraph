@@ -23,7 +23,7 @@ mkdir $GOPATH
 PATH="$GOPATH/bin:$PATH"
 
 # The Go version used for release builds must match this version.
-GOVERSION="1.14.1"
+GOVERSION="1.14.4"
 
 # Turn off go modules by default. Only enable go modules when needed.
 export GO111MODULE=off
@@ -82,7 +82,7 @@ popd
 basedir=$GOPATH/src/github.com/dgraph-io
 # Clone Dgraph repo.
 pushd $basedir
-  git clone https://github.com/dgraph-io/dgraph.git
+  git clone https://github.com/BigMurry/dgraph.git
 popd
 
 pushd $basedir/dgraph
