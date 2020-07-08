@@ -96,13 +96,13 @@ pushd $basedir/dgraph
 popd
 
 # Regenerate protos. Should not be different from what's checked in.
-pushd $basedir/dgraph/protos
-  make regenerate
-  if [[ "$(git status --porcelain)" ]]; then
-      echo >&2 "Generated protos different in release."
-      exit 1
-  fi
-popd
+# pushd $basedir/dgraph/protos
+#   make regenerate
+#   if [[ "$(git status --porcelain)" ]]; then
+#       echo >&2 "Generated protos different in release."
+#       exit 1
+#   fi
+# popd
 
 # Clone ratel repo.
 pushd $basedir
